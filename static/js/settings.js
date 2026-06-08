@@ -103,6 +103,89 @@ function initClose() {
   });
 }
 
+/* ── "Close" button: gracefully stop the server ── */
+const _POWER_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>';
+
+function _shutdownOverlayEl() {
+  let ov = document.getElementById('shutdown-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'shutdown-overlay';
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+  return ov;
+}
+
+function _renderShutdownStopped(ov) {
+  ov.innerHTML =
+    '<div class="shutdown-overlay-card">' +
+    '<div class="shutdown-stopped-icon">' + _POWER_SVG + '</div>' +
+    '<div class="shutdown-title">Odysseus has stopped</div>' +
+    '<div class="shutdown-sub">The server is no longer running — you can close this tab. ' +
+    'Relaunch it (e.g. the Odysseus desktop shortcut) when you want it back.</div>' +
+    '</div>';
+}
+
+function showShutdownOverlay() {
+  const ov = _shutdownOverlayEl();
+  ov.innerHTML =
+    '<div class="shutdown-overlay-card">' +
+    '<div class="shutdown-spinner"></div>' +
+    '<div class="shutdown-title">Odysseus is shutting down…</div>' +
+    '<div class="shutdown-sub">Waiting for the server to stop.</div>' +
+    '</div>';
+
+  // Poll the liveness endpoint until it stops answering (server gone), then
+  // switch to a definitive stopped state. A network error means the server is
+  // down — that's the success case here. Capped so the spinner can't run
+  // forever even if something keeps answering.
+  let tries = 0;
+  const MAX_TRIES = 25;
+  const poll = async () => {
+    tries += 1;
+    try {
+      await fetch('/api/system/ping?_=' + Date.now(), { method: 'GET', cache: 'no-store' });
+      if (tries >= MAX_TRIES) { _renderShutdownStopped(ov); return; }
+      setTimeout(poll, 1000);
+    } catch (_) {
+      _renderShutdownStopped(ov);
+    }
+  };
+  setTimeout(poll, 1200);
+}
+
+function initShutdown() {
+  const btn = el('settings-shutdown-btn');
+  if (!btn || btn._wired) return;
+  btn._wired = true;
+  btn.addEventListener('click', async () => {
+    const ok = await uiModule.styledConfirm(
+      'Shut down Odysseus? The server will stop for all users — you\'ll need to relaunch it to use it again. ' +
+      '(Dependency containers like ChromaDB keep running.)',
+      { confirmText: 'Shut down', danger: true }
+    );
+    if (!ok) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/system/shutdown', { method: 'POST', credentials: 'same-origin' });
+      if (res.ok) {
+        showShutdownOverlay();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        const msg = data.detail || 'Shutdown failed';
+        uiModule.showError ? uiModule.showError(msg) : uiModule.showToast(msg);
+        btn.disabled = false;
+      }
+    } catch (e) {
+      // The server may drop the connection as it exits before/while replying —
+      // that's expected on a successful shutdown, so show the overlay anyway.
+      showShutdownOverlay();
+    }
+  });
+}
+
 /* ── Appearance-tab opacity slider ──
    Mirrors the Theme customizer's slider: fades the settings modal's
    background (and inner cards) via color-mix so the user can watch the
@@ -2152,6 +2235,7 @@ function initAll() {
   initTabs();
   initDrag();
   initClose();
+  initShutdown();
   initOpacityToggle();
   initialized = true;
   initDefaultChat();

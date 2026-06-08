@@ -653,6 +653,10 @@ app.include_router(setup_prefs_routes())
 from routes.backup_routes import setup_backup_routes
 app.include_router(setup_backup_routes(memory_manager, preset_manager, skills_manager))
 
+# System lifecycle (graceful shutdown from the UI)
+from routes.system_routes import setup_system_routes
+app.include_router(setup_system_routes())
+
 from routes.font_routes import setup_font_routes
 app.include_router(setup_font_routes())
 

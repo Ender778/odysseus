@@ -21099,6 +21099,58 @@ body.gallery-selecting .gallery-dl-btn,
   opacity: 1;
 }
 
+/* "Close" (stop the server) — pinned to the very bottom of the sidebar.
+   margin-top:auto pushes it down; the sidebar is a flex column. */
+.settings-nav-shutdown {
+  margin-top: auto;
+  color: var(--red);
+}
+.settings-nav-shutdown svg { opacity: 0.85; }
+.settings-nav-shutdown:hover {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+}
+
+/* Full-screen overlay shown after the user confirms a server shutdown. */
+#shutdown-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.shutdown-overlay-card {
+  max-width: 360px;
+  padding: 28px 32px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.shutdown-spinner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 16px;
+  border: 3px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: shutdown-spin 0.8s linear infinite;
+}
+@keyframes shutdown-spin { to { transform: rotate(360deg); } }
+.shutdown-stopped-icon {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 16px;
+  color: var(--red);
+}
+.shutdown-stopped-icon svg { width: 100%; height: 100%; display: block; }
+.shutdown-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--fg); }
+.shutdown-sub { font-size: 12px; line-height: 1.5; color: var(--color-muted); }
+
 .settings-sidebar-divider { height: 1px; background: var(--border); margin: 8px 12px; }
 
 /* Keyboard shortcuts */
